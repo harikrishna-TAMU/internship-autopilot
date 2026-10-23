@@ -1,0 +1,20 @@
+# Pipeline settings. No personal data here: that lives in .env and config/profile.yaml (both gitignored).
+
+min_fit_score: 55          # jobs scoring below this are skipped as low_fit (see `autopilot rejected`)
+max_tabs: 8                # most tabs `autopilot fill` opens at once
+poll_minutes: 15           # how often `autopilot ingest --watch` checks Gmail
+gmail_label: Jobs
+processed_label: Jobs/Processed
+capture_tag: jobs          # capture address = GMAIL_ADDRESS with +jobs added
+locations: []              # preferred locations, e.g. ["Texas", "Remote"]; affects the fit score only
+browser_channel: chrome    # use the installed Google Chrome
+max_resume_pages: 1
+resume_format: latex       # latex = LaTeX template (needs Tectonic); html = built-in fallback
+
+effort:                    # Claude effort per step: low | medium | high | xhigh | max
+  extract: low
+  screenshot: low
+  fit: medium
+  tailor: high
+  verify: medium
+  map_fields: medium

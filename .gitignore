@@ -1,0 +1,31 @@
+# Secrets and personal data (spec rule 6)
+.env
+.env.*
+!.env.example
+*~
+credentials.json
+token.json
+config/profile.yaml
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Personal notes kept out of the public repo
+conversation-log.md
+
+# Folders of past resumes kept next to the project (personal)
+Arista Resume/
+my-resumes/

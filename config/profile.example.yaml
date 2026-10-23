@@ -1,0 +1,99 @@
+# Your master profile: the ONLY source resume tailoring and form filling may use.
+# `autopilot init` copies this to config/profile.yaml (gitignored). Replace every TODO.
+#
+# - Every entry and bullet needs a unique, stable id (exp1, exp1.b1, proj2.b3, ...).
+# - Add every true bullet you have, more than fits on one page. Tailoring picks, reorders and lightly
+#   rephrases them for each job; it never adds facts. Numbers can only appear if they're in a bullet.
+# - **double asterisks** = bold in the PDF (bold 1-3 key terms per bullet).
+# - Tip: open this repo in Claude Code or Cursor and ask it to fill this file from your resume (PDF/LaTeX/Word).
+
+basics:
+  name: TODO Full Name
+  preferred_name: null
+  email: you@university.edu            # shown on resumes and applications
+  phone: "TODO +1 555 555 5555"
+  location: TODO City, ST
+  links:
+    linkedin: https://www.linkedin.com/in/TODO
+    github: https://github.com/TODO
+    portfolio: null
+  resume_links: [linkedin, github]     # links printed on the resume; all links are still used in applications
+  resume_filename: null                # e.g. Jane_Doe_Resume.pdf (default: <First>_<Last>_Resume.pdf)
+
+# Your own 2-3 sentence summary. Each resume gets a role-specific one written from your facts;
+# this is the fallback and a style example. Don't mention years of experience if you apply to internships.
+summary: >-
+  TODO e.g. Computer Science student at Example University building **backend services** in **Python**.
+
+education:
+  - id: edu1
+    school: TODO University
+    degree: TODO B.S.
+    major: TODO Computer Science
+    location: TODO City, ST
+    start: 2024-08                     # YYYY-MM
+    grad: 2028-05                      # YYYY-MM, expected graduation (used for grad-year eligibility checks)
+    gpa: "3.8/4.0"                     # shown as written, or null to leave it off
+    gpa_label: GPA                     # e.g. CGPA
+    coursework:
+      - Data Structures and Algorithms
+      - TODO more courses
+
+experience:
+  - id: exp1
+    org: TODO Company
+    title: TODO Software Engineering Intern
+    location: TODO City, ST
+    dates: May 2026 – Aug 2026
+    bullets:
+      - id: exp1.b1
+        text: "TODO Built **what** with **which tech**, and the result (only true numbers)"
+        skills: [Python, FastAPI]
+      - id: exp1.b2
+        text: "TODO Another accomplishment"
+        skills: [PostgreSQL]
+      # Optional bullet, used only for matching roles and always placed last in its entry:
+      # - id: exp1.b3
+      #   text: "Designed a **load-balancing** algorithm ..."
+      #   optional: true
+      #   use_when: "networking or infrastructure roles"
+      #   position: last
+
+projects:
+  - id: proj1
+    name: TODO Project Name
+    subtitle: null                     # e.g. "Autonomous Network Defense Agent"
+    link: null
+    dates: Jan 2026 – Present
+    tech: [React, AWS]
+    advisor: null                      # e.g. "Dr. Jane Smith" for research projects
+    bullets:
+      - id: proj1.b1
+        text: "TODO What the project does and what you built"
+        skills: [React]
+
+leadership_title: Leadership & Collaboration
+leadership: []                         # e.g. - {id: lead.b1, text: "Mentored **5** new engineers ...", skills: []}
+
+skills:                                # categories and their order are kept on the resume
+  Languages: [Python, Java]
+  Frameworks: [React, FastAPI]
+  Tools: [Git, Docker, AWS]
+
+# Used ONLY to answer application questions and check eligibility. Never printed on the resume.
+work_authorization:
+  summary: null                        # e.g. "US citizen" or "F-1 student; requires sponsorship"
+  authorized_to_work_in_us: null       # true / false; null = always leave the question for you
+  requires_sponsorship_now: null
+  requires_sponsorship_future: null
+
+eeo:                                   # optional voluntary self-ID; null = leave the question for you
+  gender: null
+  race_ethnicity: null
+  hispanic_latino: null
+  veteran_status: null
+  disability_status: null
+
+answers: {}                            # saved answers for common questions, for example:
+#  how_did_you_hear: "Social media"
+#  availability: "Summer 2027 (May to August)"

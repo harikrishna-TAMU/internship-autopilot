@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ basics.name }} - Resume</title>
+<style>
+  @page { size: Letter; margin: 0.4in 0.5in; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Latin Modern Roman", "Computer Modern", Georgia, serif; font-size: 10pt; line-height: 1.25; color: #141414; }
+  h1 { font-size: 22pt; font-weight: 400; font-variant: small-caps; text-align: center; margin: 0 0 3pt; }
+  .contact { text-align: center; font-size: 9.5pt; margin-bottom: 4pt; }
+  .contact span + span::before { content: "  |  "; white-space: pre; }
+  h2 { font-size: 12pt; font-weight: 400; font-variant: small-caps; color: #285aa0;
+       border-bottom: 0.8pt solid #285aa0; margin: 7pt 0 3pt; padding-bottom: 1pt; }
+  .entry { margin: 0 0 3pt 10pt; break-inside: avoid; }
+  .row { display: flex; justify-content: space-between; gap: 12pt; }
+  .row .left { font-weight: 700; }
+  .row.sub { font-size: 9.5pt; font-style: italic; }
+  .row.sub .left { font-weight: 400; }
+  ul { margin: 1pt 0 0; padding-left: 13pt; font-size: 9.5pt; }
+  li { margin: 0 0 1pt; }
+  .skills { margin-left: 10pt; font-size: 9.5pt; }
+  .summary { font-size: 9.5pt; }
+  a { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+  <h1>{{ basics.name }}</h1>
+  <div class="contact">
+    {% if basics.phone %}<span>{{ basics.phone }}</span>{% endif %}
+    <span><a href="mailto:{{ basics.email }}">{{ basics.email }}</a></span>
+    {% if basics.links.linkedin and 'linkedin' in basics.resume_links %}<span><a href="{{ basics.links.linkedin }}">{{ basics.links.linkedin | bare_url }}</a></span>{% endif %}
+    {% if basics.links.github and 'github' in basics.resume_links %}<span><a href="{{ basics.links.github }}">{{ basics.links.github | bare_url }}</a></span>{% endif %}
+    {% if basics.links.portfolio and 'portfolio' in basics.resume_links %}<span><a href="{{ basics.links.portfolio }}">{{ basics.links.portfolio | bare_url }}</a></span>{% endif %}
+    {% if basics.location %}<span>{{ basics.location }}</span>{% endif %}
+  </div>
+
+  {% if summary %}<h2>Summary</h2><div class="summary">{{ summary | bold }}</div>{% endif %}
+
+  {% if skills %}
+  <h2>Core Skills</h2>
+  <div class="skills">{% for group in skills %}<div><b>{{ group.category }}:</b> {{ group.items | join(", ") }}</div>{% endfor %}</div>
+  {% endif %}
+
+  <h2>Education</h2>
+  {% for edu, coursework in education %}
+  <div class="entry">
+    <div class="row"><span class="left">{{ edu.school }}</span><span>{{ edu.location or "" }}</span></div>
+    <div class="row sub">
+      <span class="left">{{ edu.degree }}{% if edu.major %}, {{ edu.major }}{% endif %}{% if edu.gpa %} | {{ edu.gpa_label }}: {{ edu.gpa }}{% endif %}</span>
+      <span>{% if edu.start %}{{ edu.start | month_year }} – {% endif %}{{ edu.grad | month_year }}</span>
+    </div>
+    {% if coursework %}<ul><li>Coursework: {{ coursework | join(", ") }}.</li></ul>{% endif %}
+  </div>
+  {% endfor %}
+
+  {% if experience %}
+  <h2>Experience</h2>
+  {% for exp, bullets in experience %}
+  <div class="entry">
+    <div class="row"><span class="left">{{ exp.title }}</span><span>{{ exp.dates }}</span></div>
+    <div class="row sub"><span class="left">{{ exp.org }}</span><span>{{ exp.location or "" }}</span></div>
+    <ul>{% for b in bullets %}<li>{{ b.text | bold }}</li>{% endfor %}</ul>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if projects %}
+  <h2>Projects</h2>
+  {% for proj, bullets in projects %}
+  <div class="entry">
+    <div class="row"><span class="left">{{ proj.name }}{% if proj.subtitle %} <span style="font-weight:400">– {{ proj.subtitle }}</span>{% endif %}</span><span>{{ proj.dates or "" }}</span></div>
+    <div class="row sub"><span class="left">{{ proj.tech | join(", ") }}{% if proj.advisor %} | Advisor: {{ proj.advisor }}{% endif %}</span></div>
+    <ul>{% for b in bullets %}<li>{{ b.text | bold }}</li>{% endfor %}</ul>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if leadership %}
+  <h2>{{ leadership_title }}</h2>
+  <ul>{% for b in leadership %}<li>{{ b.text | bold }}</li>{% endfor %}</ul>
+  {% endif %}
+</body>
+</html>
