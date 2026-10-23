@@ -9,6 +9,7 @@ from playwright.sync_api import Page
 class Adapter:
     name = "generic"
     can_fill = True
+    follow_up = True  # keep filling after you sign in, and on each new page of a multi-step form
     upload_first = False
     open_only_note = ""
 
@@ -28,6 +29,7 @@ class OpenOnly(Adapter):
     """Portals that need accounts or ban automation: open the tab, fill nothing."""
 
     can_fill = False
+    follow_up = False
 
     def __init__(self, name: str, note: str):
         self.name = name

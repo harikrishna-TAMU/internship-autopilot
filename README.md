@@ -36,7 +36,7 @@ cd ApplyPilot
 
 (If the repo is private, ask the owner to add you as a collaborator first.)
 
-Then follow **Setup** below, steps 1–5 (about 30 minutes). What you make your own:
+Then follow **Setup** below, steps 1–6 (about 30 minutes). What you make your own:
 
 | What | Where | Notes |
 |---|---|---|
@@ -109,7 +109,19 @@ Use a **personal** Gmail account, not a university one: universities control API
 
 If ingest later says Gmail isn't authorized, run `autopilot gmail-auth` again. Google expires tokens for apps in *Testing* mode after 7 days. To stop that, set the consent screen's publishing status to *In production*. It stays a private app that only you use.
 
-### 5. Check everything
+### 5. Review browser (optional, recommended)
+
+```bash
+uv run autopilot browser-setup
+```
+
+ApplyPilot fills applications in its own Chrome window (a separate profile in `data/chrome-profile`; your everyday Chrome can't be automated, by Chrome's design). This opens that window as a **normal** Chrome once so you can:
+- sign into Chrome and turn on sync (keep **Passwords** on), so Chrome offers your saved passwords on job-site login pages
+- log into job portals you use (Workday tenants etc.) so they stay signed in.
+
+Quit it with ⌘Q when done. ApplyPilot never reads or types passwords: Chrome offers them and you click.
+
+### 6. Check everything
 
 ```bash
 uv run autopilot doctor
@@ -165,7 +177,8 @@ In each filled tab:
 - **Orange dashed outline**: an answer Claude drafted. Read and edit it.
 - **Red outline**: a required field left for you (consent boxes, self-ID questions, anything not in your profile).
 - A banner at the top summarizes what was filled. Nothing is submitted.
-- Workday and LinkedIn tabs are only opened (accounts / automation bans). Fill those yourself, or with the Simplify Copilot extension (keep its "continuously autofill multipage forms" setting off).
+- **Sites that need a login** (Workday, company portals): the tab opens on the sign-in page and you get a notification. Sign in (or create the account) yourself, and the form is filled as soon as it appears. On multi-step forms, click **Next** yourself; each new page is filled too, and anything already entered is kept.
+- LinkedIn tabs are only opened, never filled (LinkedIn bans automation).
 
 The review window uses its own Chrome profile in `data/chrome-profile`, separate from your everyday Chrome. In manual mode, the `fill` command waits until you close that window.
 
@@ -204,7 +217,7 @@ If Gmail access expires (see Setup step 4), the background worker sends a notifi
 1. **Never submits.** All clicks go through `fill/safety.py`, which refuses anything that looks like submit/apply/next/confirm. A guard cancels form submission while filling, and a test fails if any other module clicks, presses keys or calls `submit()`.
 2. **No Instagram scraping.** Capture is manual.
 3. **No invented experience.** Resume bullets must cite a profile bullet ID. A validator drops unknown skills and IDs and reverts any rewrite that adds numbers. A second Claude pass reverts rewrites that add claims. Every change is listed in `tailor.json` next to the PDF.
-4. **No CAPTCHAs, accounts or passwords.** Pages with a password field are only opened.
+4. **No CAPTCHAs, accounts or passwords.** Sign-in pages are never filled and ApplyPilot never reads or types passwords; you sign in (Chrome can offer your saved passwords), then it fills the form.
 5. **No LinkedIn automation.** LinkedIn tabs are only opened.
 6. **Secrets stay out of git:** `.env`, `credentials.json`, `token.json`, `config/profile.yaml`, `data/`.
 

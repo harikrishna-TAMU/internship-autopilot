@@ -180,32 +180,53 @@ def render_tex(profile: Profile, sel: TailorSelection, target: str = "") -> str:
 
 
 def drop_one(sel: TailorSelection, optional_ids: frozenset[str] = frozenset()) -> str | None:
-    """Remove the least important item to shorten the page. Returns what was dropped, or None."""
+    """Remove the least important item to shorten the page. Returns what was dropped, or None.
+
+    Trims in a balanced order so the most relevant content survives: optional bullets, extra
+    leadership, the main job beyond 4 bullets, a 4th project, project bullets beyond 2, a 3rd
+    project, the main job beyond 3, ... Within a section, Claude's order is relevance order.
+    """
     projs, exps = sel.projects, sel.experience
+
     for entry in [*projs, *exps]:  # bullets marked optional go first
         for b in reversed(entry.bullets):
             if b.source_id in optional_ids and len(entry.bullets) > 1:
                 entry.bullets.remove(b)
                 return b.source_id
-    multi = [p for p in projs if len(p.bullets) > 1]
-    if multi:  # trim a bullet from the least relevant project that has several, before dropping a project
-        return multi[-1].bullets.pop().source_id
-    if len(sel.leadership) > 1:
-        return sel.leadership.pop().source_id
-    if len(projs) > 2:
-        return projs.pop().source_id
-    if exps and max(len(e.bullets) for e in exps) > 3:
-        longest = max(reversed(exps), key=lambda e: len(e.bullets))
-        return longest.bullets.pop().source_id
-    if len(projs) > 1:
-        return projs.pop().source_id
-    for pick in reversed(sel.education):
-        if pick.coursework:
-            pick.coursework = []
-            return f"{pick.source_id} coursework"
-    if exps and max(len(e.bullets) for e in exps) > 1:
-        longest = max(reversed(exps), key=lambda e: len(e.bullets))
-        return longest.bullets.pop().source_id
+
+    def trim_longest(entries, keep: int) -> str | None:
+        over = [e for e in entries if len(e.bullets) > keep]
+        return max(reversed(over), key=lambda e: len(e.bullets)).bullets.pop().source_id if over else None
+
+    def trim_least_relevant(entries, keep: int) -> str | None:
+        over = [e for e in entries if len(e.bullets) > keep]
+        return over[-1].bullets.pop().source_id if over else None
+
+    def drop_last_project(keep: int) -> str | None:
+        return projs.pop().source_id if len(projs) > keep else None
+
+    def clear_coursework() -> str | None:
+        for pick in reversed(sel.education):
+            if pick.coursework:
+                pick.coursework = []
+                return f"{pick.source_id} coursework"
+        return None
+
+    steps = [
+        lambda: sel.leadership.pop().source_id if len(sel.leadership) > 1 else None,
+        lambda: trim_longest(exps, 4),
+        lambda: drop_last_project(3),
+        lambda: trim_least_relevant(projs, 2),
+        lambda: drop_last_project(2),
+        lambda: trim_longest(exps, 3),
+        lambda: trim_least_relevant(projs, 1),
+        clear_coursework,
+        lambda: drop_last_project(1),
+        lambda: trim_longest(exps, 1),
+    ]
+    for step in steps:
+        if (dropped := step()) is not None:
+            return dropped
     return None
 
 

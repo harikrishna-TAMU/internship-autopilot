@@ -11,7 +11,6 @@ a Chrome window up to date: one filled tab for each job waiting for your review.
 from __future__ import annotations
 
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -28,23 +27,22 @@ from autopilot.config import Config
 from autopilot.db import Database
 from autopilot.extract.ats_lookup import ATSLookup
 from autopilot.extract.jd_fetcher import USER_AGENT, JDFetcher
-from autopilot.fill.browser import fill_one, launch_review_browser, record_fill_error
+from autopilot.fill.browser import (
+    BODY_TEXT_JS,
+    CONFIRM_RE,
+    FollowUp,
+    fill_one,
+    launch_review_browser,
+    record_fill_error,
+)
 from autopilot.headless import BrowserUnavailable, HeadlessBrowser
 from autopilot.ingest.gmail_client import GmailAuthError, GmailClient
-from autopilot.llm.claude import LLM, ClaudeLLM, LLMError
+from autopilot.llm import make_llm
+from autopilot.llm.claude import LLM, LLMError
 from autopilot.models import Status
 from autopilot.pipeline import Pipeline, Services, SetupError
 from autopilot.resume.render import make_renderer
 
-# Wording ATS confirmation pages use after a successful submit.
-CONFIRM_RE = re.compile(
-    r"thank(?:s| you) for (?:applying|your application|submitting)"
-    r"|application (?:has been |was )?(?:successfully )?(?:submitted|received)"
-    r"|we(?:'|’)?ve received your application|we have received your application"
-    r"|your application (?:is|has been) (?:complete|submitted|received)",
-    re.I,
-)
-BODY_TEXT_JS = "() => document.body ? document.body.innerText.slice(0, 20000) : ''"
 TAB_CHECK_SECONDS = 20
 
 
@@ -98,6 +96,8 @@ class TabManager:
         self.ctx = None
         self.open: dict[int, object] = {}
         self.baseline: dict[int, bool] = {}
+        self.follow = FollowUp(cfg, db, llm, log, notify=None if headless else notify)
+        self.extra: dict[int, list] = {}  # tabs the job's page opened itself (e.g. "Apply now" in a new tab)
 
     def _context(self):
         if self.ctx is None:
@@ -161,6 +161,8 @@ class TabManager:
                 continue
             self.open[job["id"]] = page
             self.db.update_job(job["id"], tab_state="open")
+            self.follow.track(self.db.get_job(job["id"]), page)
+            self._follow_new_tabs(job["id"], page)
             try:
                 self.baseline[job["id"]] = bool(CONFIRM_RE.search(page.evaluate(BODY_TEXT_JS)))
             except PlaywrightError:
@@ -168,29 +170,57 @@ class TabManager:
             opened += 1
         return opened
 
+    def _follow_new_tabs(self, jid: int, page) -> None:
+        """If the page opens another tab (an "Apply now" link, a sign-in popup), keep filling there too."""
+
+        def adopt(new_page) -> None:
+            self.extra.setdefault(jid, []).append(new_page)
+            new_page.on("popup", adopt)
+
+        page.on("popup", adopt)
+
+    def _pages(self, jid: int) -> list:
+        pages = [p for p in [self.open[jid], *self.extra.get(jid, [])] if not p.is_closed()]
+        self.extra[jid] = pages[1:] if pages and pages[0] is self.open[jid] else pages
+        return pages
+
     def watch(self) -> list[int]:
         """Notice closed tabs and confirmation pages. Returns ids of jobs detected as submitted."""
         submitted = []
-        for jid, page in list(self.open.items()):
-            if page.is_closed():
+        for jid in list(self.open):
+            pages = self._pages(jid)
+            if not pages:
                 del self.open[jid]
+                self.extra.pop(jid, None)
+                self.follow.forget(jid)
                 job = self.db.get_job(jid)
                 if job and job["status"] in (Status.TAILORED, Status.AWAITING_REVIEW):
                     self.db.update_job(jid, tab_state="dismissed")
                     self.log(f"tab #{jid} closed without submitting; `autopilot open` brings it back")
                 continue
-            try:
-                text = page.evaluate(BODY_TEXT_JS)
-            except PlaywrightError:
-                continue
-            if not self.baseline.get(jid) and CONFIRM_RE.search(text):
-                job = self.db.get_job(jid)
-                if job and job["status"] != Status.SUBMITTED:
-                    self.db.set_status(jid, Status.SUBMITTED, "confirmation page detected after you submitted")
-                self.db.update_job(jid, tab_state=None)
-                del self.open[jid]
-                submitted.append(jid)
-                self.log(f"job #{jid} submitted (confirmation page seen)")
+            if self.open[jid].is_closed():  # you closed the job page but kept its application tab
+                self.open[jid] = pages[0]
+                self.baseline[jid] = False
+            for page in pages:
+                try:
+                    text = page.evaluate(BODY_TEXT_JS)
+                except PlaywrightError:
+                    continue
+                baseline = self.baseline.get(jid) if page is self.open[jid] else False
+                if not baseline and CONFIRM_RE.search(text):
+                    job = self.db.get_job(jid)
+                    if job and job["status"] != Status.SUBMITTED:
+                        self.db.set_status(jid, Status.SUBMITTED, "confirmation page detected after you submitted")
+                    self.db.update_job(jid, tab_state=None)
+                    del self.open[jid]
+                    self.extra.pop(jid, None)
+                    self.follow.forget(jid)
+                    submitted.append(jid)
+                    self.log(f"job #{jid} submitted (confirmation page seen)")
+                    break
+                # After you sign in, or on the next page of a multi-step form: fill what's new.
+                if msg := self.follow.update(jid, page):
+                    self.log(f"tab #{jid}: {msg}")
         return submitted
 
     def idle(self, seconds: float) -> None:
@@ -219,6 +249,7 @@ class Worker:
         self.tabs_enabled = tabs
         self.stopping = False
         self._notified_auth: date | None = None
+        self._notified_llm: date | None = None
 
     def log(self, message: str) -> None:
         print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  {message}", flush=True)
@@ -235,7 +266,7 @@ class Worker:
         db = Database(cfg.db_path)
         db.conn.execute("UPDATE jobs SET tab_state = NULL WHERE tab_state IS NOT NULL")  # earlier tabs are gone
         db.conn.commit()
-        llm = ClaudeLLM.from_config(cfg)
+        llm = make_llm(cfg)
         http = httpx.Client(
             headers={"User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}, timeout=25, follow_redirects=True
         )
@@ -303,6 +334,9 @@ class Worker:
             self.log(f"waiting on setup: {e}")
         except (LLMError, BrowserUnavailable) as e:
             self.log(f"stopped this round: {e}")
+            if self._notified_llm != date.today():
+                notify(f"Paused: {e}")
+                self._notified_llm = date.today()
 
     def refresh_tabs(self, tabs: TabManager) -> None:
         try:

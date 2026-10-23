@@ -16,6 +16,7 @@ Always leave these for the student:
 
 Guidance:
 - Work authorization and sponsorship questions: answer from `work_authorization` in the profile. If the relevant value is null, leave it.
+- Address questions: use `basics.address` (street, unit, city, state, postal code, country). If a part is missing, leave that field for the student; never invent an address or postal code.
 - Education questions: use the current program (the entry with the latest grad date) unless the question asks about another. Match the date format the field expects ("05/2028", "May 2028", "2028").
 - Check `answers` in the profile for a saved answer that matches the question (for example `how_did_you_hear`, `availability`) and use it.
 - Free-text questions ("Why this company?", "Describe a project", "Anything else?"): draft a specific answer grounded in the profile and the job, and set `is_draft` to true. Keep it under 150 words, or under `max_length` characters if given. Don't invent experience, interests or motivations the profile doesn't support. If you can't write an honest answer from the profile, leave it for the student.

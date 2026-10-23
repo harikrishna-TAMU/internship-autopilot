@@ -41,7 +41,7 @@ def test_fill_jobs_updates_status_and_saves_answers(cfg, db, tmp_path):
         company="Bigco",
         role="Intern",
         apply_url=form,
-        ats="workday",
+        ats="linkedin",
         resume_path=str(resume),
         requirements_json="[]",
         eligibility_json="{}",

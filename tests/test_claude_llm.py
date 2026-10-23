@@ -93,3 +93,17 @@ def test_bad_key_is_fatal():
     with pytest.raises(LLMError) as e:
         llm.ask("fit", FitResult, "x")
     assert e.value.fatal
+
+
+def test_low_credit_balance_pauses_instead_of_failing_jobs():
+    err = {
+        "type": "error",
+        "error": {
+            "type": "invalid_request_error",
+            "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.",
+        },
+    }
+    llm, _ = make_llm(lambda r: httpx2.Response(400, json=err))
+    with pytest.raises(LLMError) as e:
+        llm.ask("fit", FitResult, "x")
+    assert e.value.fatal and "Plans & Billing" in str(e.value)

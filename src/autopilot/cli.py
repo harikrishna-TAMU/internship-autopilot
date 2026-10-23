@@ -23,7 +23,8 @@ from autopilot.extract.ats_lookup import ATSLookup
 from autopilot.extract.jd_fetcher import USER_AGENT, JDFetcher
 from autopilot.headless import BrowserUnavailable, HeadlessBrowser
 from autopilot.ingest.gmail_client import GmailAuthError, GmailClient
-from autopilot.llm.claude import ClaudeLLM, LLMError
+from autopilot.llm import make_llm as _make_llm
+from autopilot.llm.claude import LLMError
 from autopilot.models import Reason, Stage, Status
 from autopilot.pipeline import Pipeline, Services, SetupError
 from autopilot.rejections import export_csv, parse_since, reject, restore
@@ -63,8 +64,12 @@ def opened() -> Iterator[tuple[Config, Database]]:
         db.close()
 
 
-def make_llm(cfg: Config) -> ClaudeLLM:
-    return ClaudeLLM.from_config(cfg)
+def make_llm(cfg: Config):
+    return _make_llm(cfg)
+
+
+def uses_subscription(cfg: Config) -> bool:
+    return (cfg.env.llm_backend or "api").strip().lower() in ("claude-code", "claude_code", "subscription")
 
 
 @contextmanager
@@ -149,11 +154,18 @@ def doctor() -> None:
             + ("" if passed or not fix else f"  [dim]→ {fix}[/dim]")
         )
 
-    if cfg.env.anthropic_api_key:
+    if uses_subscription(cfg):
+        llm = make_llm(cfg)
+        problem = llm.verify_access()
+        check(problem is None, "Claude via Claude Code (your Claude plan, no API credits)", problem or "")
+        console.print(f"  account: {llm.describe()}")
+    elif cfg.env.anthropic_api_key:
         problem = make_llm(cfg).verify_access()
         check(problem is None, f"Claude API key works (model: {cfg.env.claude_model})", problem or "")
     else:
-        check(False, "ANTHROPIC_API_KEY set in .env", "get one at console.anthropic.com")
+        check(
+            False, "ANTHROPIC_API_KEY set in .env", "get one at console.anthropic.com, or set LLM_BACKEND=claude-code"
+        )
     check(
         bool(cfg.capture_address),
         f"GMAIL_ADDRESS set (capture address: {cfg.capture_address or '-'})",
@@ -181,6 +193,46 @@ def doctor() -> None:
     except Exception as e:  # noqa: BLE001
         check(False, "Chrome available", str(e).splitlines()[0])
     raise typer.Exit(0 if ok else 1)
+
+
+def chrome_launch_command(profile_dir: str, url: str) -> list[str] | None:
+    """A normal (non-automated) Chrome on the review profile; it runs beside your everyday Chrome."""
+    import platform
+    import shutil as _shutil
+
+    args = [f"--user-data-dir={profile_dir}", "--no-first-run", "--no-default-browser-check", url]
+    if platform.system() == "Darwin" and os.path.exists("/Applications/Google Chrome.app"):
+        return ["open", "-n", "-W", "-a", "Google Chrome", "--args", *args]
+    for name in ("google-chrome", "google-chrome-stable", "chrome", "chromium"):
+        if found := _shutil.which(name):
+            return [found, *args]
+    return None
+
+
+@app.command("browser-setup")
+def browser_setup() -> None:
+    """One time: open the review Chrome window normally to sign into Chrome and your job sites."""
+    import subprocess
+
+    from autopilot.worker import running_pid
+
+    cfg = load_config()
+    cfg.ensure_dirs()
+    if running_pid(cfg):
+        fail("Stop the background worker first (`autopilot stop`): Chrome can't open the review profile twice.")
+    cmd = chrome_launch_command(str(cfg.chrome_profile_dir), "chrome://settings/people")
+    if cmd is None:
+        fail("Google Chrome wasn't found.")
+    console.print(
+        "[bold]A separate Chrome window is opening[/bold] (the review profile, not your everyday Chrome). In it:\n"
+        "  1. Click the profile icon (top right) → [bold]Turn on sync[/bold] → sign in with your Google account,\n"
+        "     and keep [bold]Passwords[/bold] on. Chrome can then offer your saved passwords on login pages.\n"
+        "  2. Optional: log into job sites you use (Workday portals, etc.) so they stay signed in.\n"
+        "  3. Quit that window with [bold]⌘Q[/bold] while it's in front (your everyday Chrome stays open).\n"
+        "ApplyPilot never reads or types your passwords; Chrome offers them and you click to use them."
+    )
+    subprocess.run(cmd, check=False)
+    console.print("Done. Start ApplyPilot with `uv run autopilot start`.")
 
 
 @app.command("gmail-auth")
@@ -220,10 +272,13 @@ def start(
     if pid := running_pid(cfg):
         console.print(f"Already running (pid {pid}). `autopilot status` shows what it's doing.")
         return
-    if not cfg.env.anthropic_api_key:
-        fail("Add ANTHROPIC_API_KEY to .env first.")
-    if problem := make_llm(cfg).verify_access():
+    if not uses_subscription(cfg) and not cfg.env.anthropic_api_key:
+        fail("Add ANTHROPIC_API_KEY to .env first, or set LLM_BACKEND=claude-code to use your Claude plan.")
+    llm = make_llm(cfg)
+    if problem := llm.verify_access():
         fail(problem)
+    if uses_subscription(cfg):
+        console.print(f"Claude: your plan via Claude Code ({llm.describe()})")
     if not cfg.token_path.exists():
         fail("Gmail isn't authorized yet. Run `autopilot gmail-auth` once, then `autopilot start`.")
     try:
@@ -497,11 +552,16 @@ def show(job_id: int) -> None:
                 console.print(f"  dropped to fit one page: {', '.join(tailor['dropped_to_fit_page'])}")
         answers = loads(j["answers_json"])
         if answers:
+            console.print("[bold]application form[/bold] (what ApplyPilot did vs. what the site already had):")
+            for f in answers.get("filled", []):
+                console.print(f"  [green]filled by ApplyPilot[/green]  {f['label'][:70]}: {f.get('value')}")
             for d in answers.get("drafted", []):
-                console.print(f"[bold]drafted[/bold] [{d['label'][:80]}]\n  {d['value']}")
+                console.print(f"  [yellow]drafted, check it[/yellow]     {d['label'][:70]}:\n      {d['value']}")
             for left in answers.get("left_for_you", []):
                 req = " (required)" if left.get("required") else ""
-                console.print(f"[bold]left for you{req}:[/bold] {left['label'][:80]}: {left['reason']}")
+                console.print(f"  [red]left for you{req}[/red]  {left['label'][:70]}: {left['reason']}")
+            for k in answers.get("kept", []):
+                console.print(f"  [dim]already filled by the site/you, kept[/dim]  {k['label'][:70]}")
         console.print("[bold]history:[/bold]")
         for e in db.events_for(job_id):
             console.print(f"  {e['at']}  {e['from_status'] or '-'} → {e['to_status']}  {e['detail'] or ''}")

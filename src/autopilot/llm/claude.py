@@ -59,6 +59,17 @@ WORKSPACE_HINT = (
 )
 
 
+BILLING_HINT = (
+    "Your Claude API credit balance is too low. Add credits at console.anthropic.com → Plans & Billing; "
+    "waiting jobs continue on the next run."
+)
+
+
+def is_billing_error(e: anthropic.APIStatusError) -> bool:
+    msg = str(e.message).lower()
+    return e.status_code == 402 or "credit balance" in msg or "billing" in msg
+
+
 class ClaudeLLM:
     def __init__(self, api_key: str | None, model: str, efforts: dict[str, str], workspace_id: str | None = None):
         # With no key, the SDK falls back to ANTHROPIC_AUTH_TOKEN or an `ant auth login` profile.
@@ -130,6 +141,8 @@ class ClaudeLLM:
         except anthropic.APIStatusError as e:
             if "workspace" in str(e.message).lower():
                 raise LLMError(WORKSPACE_HINT, fatal=True) from e
+            if is_billing_error(e):
+                raise LLMError(BILLING_HINT, fatal=True) from e
             raise LLMError(f"Claude API error {e.status_code}: {e.message}", fatal=e.status_code >= 500) from e
         except anthropic.APIConnectionError as e:
             raise LLMError("Couldn't reach the Claude API. Check your internet connection.", fatal=True) from e

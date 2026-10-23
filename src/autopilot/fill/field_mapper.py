@@ -210,6 +210,9 @@ def basic_value(f: FormField, profile: Profile) -> str | None:
         # Long labels are real questions ("How did you hear… email newsletter?"), not basics fields.
         if not text or len(text) > 60:
             continue
+        # Someone else's contact details, or a second number: not your basics.
+        if re.search(r"alternate|alternative|secondary|other|emergency|reference|referr|recruiter|manager", text, re.I):
+            return None
         for pattern, value in _basics_rules(profile):
             if pattern.search(text):
                 return value or None

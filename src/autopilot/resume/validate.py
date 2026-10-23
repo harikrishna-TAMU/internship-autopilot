@@ -42,6 +42,16 @@ class Problem:
     message: str
 
 
+def course_key(name: str) -> str:
+    """'Artificial Intelligence (Fall 2026)' and 'artificial intelligence' are the same course."""
+    return " ".join(re.sub(r"\s*\([^)]*\)", "", name).casefold().split())
+
+
+def coursework_index(courses: list[str]) -> dict[str, str]:
+    """course_key → the profile's own spelling (which keeps notes like '(Fall 2026)')."""
+    return {course_key(c): c for c in courses}
+
+
 def numbers(text: str) -> set[str]:
     return {n.replace(",", "") for n in NUM_RE.findall(text or "")}
 
@@ -86,9 +96,9 @@ def check_selection(sel: TailorSelection, profile: Profile, internship: bool = F
         if pick.source_id not in edu:
             problems.append(Problem("unknown_id", pick.source_id, f"Education '{pick.source_id}' isn't in the profile"))
             continue
-        allowed = {c.casefold() for c in edu[pick.source_id].coursework}
+        allowed = coursework_index(edu[pick.source_id].coursework)
         for c in pick.coursework:
-            if c.casefold() not in allowed:
+            if course_key(c) not in allowed:
                 problems.append(
                     Problem(
                         "unknown_coursework", pick.source_id, f"Coursework '{c}' isn't listed under {pick.source_id}"
@@ -164,9 +174,9 @@ def sanitize(sel: TailorSelection, profile: Profile, internship: bool = False) -
         if pick.source_id not in edu:
             notes.append(f"dropped unknown education '{pick.source_id}'")
             continue
-        canon = {c.casefold(): c for c in edu[pick.source_id].coursework}
-        kept = [canon[c.casefold()] for c in pick.coursework if c.casefold() in canon]
-        dropped = [c for c in pick.coursework if c.casefold() not in canon]
+        canon = coursework_index(edu[pick.source_id].coursework)
+        kept = list(dict.fromkeys(canon[course_key(c)] for c in pick.coursework if course_key(c) in canon))
+        dropped = [c for c in pick.coursework if course_key(c) not in canon]
         if dropped:
             notes.append(f"dropped coursework not in profile: {', '.join(dropped)}")
         education.append(EducationPick(source_id=pick.source_id, coursework=kept))

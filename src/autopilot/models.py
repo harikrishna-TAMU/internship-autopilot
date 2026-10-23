@@ -61,12 +61,24 @@ class Links(BaseModel):
     portfolio: str | None = None
 
 
+class Address(BaseModel):
+    """Mailing address, used only to fill application forms (never printed on the resume)."""
+
+    line1: str | None = None
+    line2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    postal_code: str | None = None
+    country: str | None = None
+
+
 class Basics(BaseModel):
     name: str
     preferred_name: str | None = None
     email: str
     phone: str | None = None
-    location: str | None = None
+    location: str | None = None  # shown on the resume, e.g. "College Station, TX"
+    address: Address | None = None  # full address for application forms only
     links: Links = Field(default_factory=Links)
     # Which links appear on the resume. Every link is still used to fill applications.
     resume_links: list[Literal["linkedin", "github", "portfolio"]] = Field(
@@ -101,7 +113,7 @@ class Education(BaseModel):
     location: str | None = None
     start: str | None = None
     grad: str  # YYYY-MM (expected or actual)
-    gpa: str | float | None = None  # shown as written, e.g. "4.0/4.0" or "8.74/10"
+    gpa: str | float | None = None  # shown as written, e.g. "3.8/4.0" or "8.5/10"
     gpa_label: str = "GPA"  # e.g. "CGPA"
     coursework: list[str] = Field(default_factory=list)
 
@@ -161,9 +173,14 @@ class Profile(BaseModel):
     eeo: EEO = Field(default_factory=EEO)
     answers: dict[str, str] = Field(default_factory=dict)
 
-    def to_yaml(self, exclude: set[str] | None = None) -> str:
-        """The profile as YAML for a prompt, leaving out sections a task doesn't need."""
+    def to_yaml(self, exclude: set[str] | None = None, include_address: bool = True) -> str:
+        """The profile as YAML for a prompt, leaving out sections a task doesn't need.
+
+        include_address=False for resume tailoring and fit scoring: the street address is only for forms.
+        """
         data = self.model_dump(exclude=exclude or set(), exclude_none=True)
+        if not include_address:
+            data.get("basics", {}).pop("address", None)
         return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
 
     # -- lookups used by the validator and the renderer --

@@ -33,7 +33,7 @@ def grad_year_blocker(profile: Profile, eligibility: dict) -> str | None:
 def score_fit(llm: LLM, profile: Profile, job, locations: list[str]) -> FitResult:
     prefs = {"preferred_locations": locations} if locations else {}
     user = (
-        f"<profile>\n{profile.to_yaml(exclude={'eeo', 'answers'})}\n</profile>\n"
+        f"<profile>\n{profile.to_yaml(exclude={'eeo', 'answers'}, include_address=False)}\n</profile>\n"
         f"<preferences>{json.dumps(prefs)}</preferences>\n"
         f"<job>\n{job_summary(job)}\n</job>\n"
         f"<job_description>\n{(job['jd_text'] or '')[:40000]}\n</job_description>"

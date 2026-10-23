@@ -14,7 +14,7 @@ The user message contains `<profile>` (YAML; every entry and bullet has an ID), 
 - Keep the profile's bold markup: `**text**` marks key technologies and results. Bold 1-3 key terms per bullet, as the profile does. Don't bold whole phrases.
 
 ## Summary
-- 2-3 sentences, professional, aimed at this specific role. Lead with the candidate's current program (degree and school) and the experience and projects most relevant to the role.
+- 2-3 sentences (about 50-70 words), professional, aimed at this specific role. Lead with the candidate's current program (degree and school) and the experience and projects most relevant to the role.
 - Use only facts in the profile. Prefer the profile's own `summary` wording where it fits.
 - When `<application_type>` is internship, never state years of experience (no "4.5 years", "X+ years", or "years of experience"). Describe the experience by what was built instead.
 - No first person ("I", "my"), no buzzword strings, no claims about passion or fit that the profile doesn't support.

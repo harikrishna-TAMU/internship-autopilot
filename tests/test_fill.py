@@ -89,6 +89,8 @@ def test_fill_greenhouse_like_form_without_submitting(page, profile, tmp_path):
 
 SEARCHABLE = """
 <form onsubmit="window.__submitted = true; return false;">
+  <label for="fn">First Name</label><input id="fn">
+  <label for="em">Email</label><input id="em" type="email">
   <label for="uni">University (search) *</label>
   <input id="uni" role="combobox" aria-autocomplete="list" required>
   <div id="lb" role="listbox" style="display:none"></div>
@@ -119,11 +121,12 @@ def test_searchable_dropdown_types_and_picks(page, profile):
 
     def mapping(user, images):
         fields = json.loads(re.search(r"<fields>\n(.*)\n</fields>", user, re.S).group(1))
-        seen.update(fields[0])
+        uni = next(f for f in fields if "University" in f["label"])
+        seen.update(uni)
         return FieldMapping(
             actions=[
                 FieldAction(
-                    field_id=fields[0]["id"],
+                    field_id=uni["id"],
                     action="select",
                     value="Texas A&M University",
                     is_draft=False,
@@ -151,3 +154,37 @@ def test_best_option():
     assert best_option("yes", ["Yes", "No"]) == 0
     assert best_option("Texas A&M University", ["Other", "Texas A&M University"]) == 1
     assert best_option("Maybe", ["Yes", "No"]) is None
+
+
+def test_job_page_with_only_an_upload_box_is_not_filled(page, profile, tmp_path):
+    """A career page's 'match your resume to jobs' widget must never receive the resume."""
+    resume = tmp_path / "r.pdf"
+    resume.write_bytes(b"%PDF-1.4")
+    page.set_content(
+        "<h1>Security Research Intern</h1><button>Apply</button>"
+        "<label for=up>Upload your resume to find matching jobs</label><input id=up type=file>"
+        "<input type=text placeholder='Search jobs' aria-label='Search jobs'>"
+    )
+    report = fill_page(page, JOB, profile, FakeLLM(), resume)
+    assert report.open_only and not report.resume_uploaded
+    assert page.evaluate("document.getElementById('up').files.length") == 0
+
+
+def test_banner_can_be_minimized_hidden_and_moved(page, profile):
+    from autopilot.fill.filler import banner
+
+    page.set_content("<h1>Apply</h1>")
+    banner(page, "Filled 3 fields.", short="3 filled · 1 need you")
+    b = page.locator("#autopilot-banner")
+    assert "ApplyPilot · 3 filled · 1 need you" in b.inner_text()
+    page.locator("#autopilot-banner .ap-toggle").click()  # you minimize it
+    assert "ap-min" in b.get_attribute("class") and not page.locator("#autopilot-banner .ap-body").is_visible()
+    bar = page.locator("#autopilot-banner .ap-bar").bounding_box()
+    page.mouse.move(bar["x"] + 20, bar["y"] + 10)
+    page.mouse.down()
+    page.mouse.move(200, 400)  # you drag it somewhere else
+    page.mouse.up()
+    box = b.bounding_box()
+    assert abs(box["y"] - 390) < 15
+    page.locator("#autopilot-banner .ap-hide").click()
+    assert not b.is_visible()

@@ -57,6 +57,16 @@ class Page:
     form_url: str | None = None
 
 
+def looks_like_prose(text: str) -> bool:
+    """False for page code (JSON, scripts) that some career sites embed instead of a readable description."""
+    sample = (text or "")[:20000]
+    if len(sample) < 200:
+        return False
+    junk = sum(sample.count(c) for c in '{}[]":;=<>\\') / len(sample)
+    letters = sum(ch.isalpha() or ch.isspace() for ch in sample) / len(sample)
+    return junk < 0.03 and letters > 0.75
+
+
 def closed_signal(text: str) -> str | None:
     """Wording that says the posting is closed, if it appears near the top or the page is short."""
     m = CLOSED_RE.search(text)
@@ -213,11 +223,13 @@ class JDFetcher:
 
         text = self._extract_text(markup, final_url) if status and status < 400 else ""
         title = _title(markup)
-        if len(text) < 1500 and self.headless:
-            # Thin text usually means the description is rendered by JavaScript.
-            r_url, r_markup, r_title = self.headless.render(url)
+        good = looks_like_prose(text)
+        if (len(text) < 1500 or not good) and self.headless:
+            # Thin text, or page code instead of prose, means the description is rendered by JavaScript.
+            r_url, r_markup, r_title = self.headless.render(url, wait_ms=4000)
             r_text = self._extract_text(r_markup, r_url)
-            if len(r_text) > len(text):
+            r_good = looks_like_prose(r_text)
+            if (r_good and not good) or (r_good == good and len(r_text) > len(text)):
                 final_url, text, title = r_url, r_text, r_title or title
         if status >= 400 and len(text) < 200:
             raise FetchError(f"{urlsplit(url).hostname} returned HTTP {status}")

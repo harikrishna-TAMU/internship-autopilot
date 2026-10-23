@@ -195,3 +195,35 @@ def test_last_position_and_optional_bullets(profile):
     assert [b.source_id for b in clean.experience[0].bullets] == ["exp1.b2", "exp1.b1"]
     # When the page is full, the optional bullet is the first thing trimmed.
     assert drop_one(clean, optional_bullet_ids(profile)) == "exp1.b1"
+
+
+def test_coursework_matches_without_term_notes(profile):
+    profile.education[0].coursework.append("Artificial Intelligence (Fall 2026)")
+    sel = selection()
+    sel.education[0].coursework = ["artificial intelligence", "Databases"]
+    assert check_selection(sel, profile) == []
+    clean, _ = sanitize(sel, profile)
+    assert clean.education[0].coursework == ["Artificial Intelligence (Fall 2026)", "Databases"]
+
+
+def test_page_fitting_keeps_relevant_projects_before_extra_job_bullets(profile):
+    from autopilot.resume.render import drop_one
+
+    sel = selection(
+        experience=[
+            TailoredEntry(source_id="exp1", bullets=[TailoredBullet(source_id=f"e{i}", text="x") for i in range(6)])
+        ],
+        projects=[
+            TailoredEntry(source_id="proj1", bullets=[TailoredBullet(source_id=f"p{i}", text="x") for i in range(3)])
+        ],
+    )
+    dropped = [drop_one(sel) for _ in range(3)]
+    assert dropped == ["e5", "e4", "p2"]  # main job trimmed to 4 first, then the project's 3rd bullet
+
+
+def test_street_address_is_only_for_application_forms(profile):
+    from autopilot.models import Address
+
+    profile.basics.address = Address(line1="1 Main St", city="Springfield", state="Illinois")
+    assert "1 Main St" in profile.to_yaml()  # form filling
+    assert "1 Main St" not in profile.to_yaml(exclude={"eeo", "answers", "work_authorization"}, include_address=False)

@@ -118,3 +118,33 @@ def test_shortlist_long_dropdowns(profile):
     picked = shortlist(options, profile_keywords(profile))
     assert "Texas A&M University - College Station" in picked and len(picked) < 60
     assert best_option("Texas A&M University", options) == options.index("Texas A&M University - College Station")
+
+
+def test_page_code_instead_of_prose_is_rendered_in_a_browser():
+    from autopilot.extract.jd_fetcher import looks_like_prose
+
+    blob = (
+        '{"themeOptions": {"customTheme": {"varTheme": {"accordion-body-text-color": "#646464"}}}, "x": [1,2,3]}' * 60
+    )
+    prose = (
+        "<html><body><h1>Security Research Intern</h1>"
+        + "<p>Design and conduct security research.</p>" * 60
+        + "</body></html>"
+    )
+    assert not looks_like_prose(blob) and looks_like_prose("Design and conduct security research. " * 20)
+
+    class FakeHeadless:
+        def render(self, url, wait_ms=2500):
+            return url, prose, "Security Research Intern"
+
+    http = client(
+        {"https://careers.example.com/job/1": (200, f"<html><body><script>{blob}</script>{blob}</body></html>")}
+    )
+    page = JDFetcher(http, FakeHeadless()).fetch("https://careers.example.com/job/1")
+    assert "Design and conduct security research." in page.text and "themeOptions" not in page.text
+
+
+def test_alternate_or_other_peoples_contact_fields_are_not_your_basics(profile):
+    assert basic_value(FormField(id="a", kind="tel", label="Alternate Phone Number"), profile) is None
+    assert basic_value(FormField(id="b", kind="email", label="Reference email"), profile) is None
+    assert basic_value(FormField(id="c", kind="tel", label="Phone number"), profile) == "+1 979 555 0100"

@@ -20,6 +20,9 @@ class Env(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
+    llm_backend: str = "api"  # api (API credits) | claude-code (your Claude Pro/Max plan via Claude Code)
+    claude_code_model: str | None = None  # claude-code only; empty = your plan's default model
+    claude_code_config_dir: str | None = None  # claude-code only; empty = Claude Code's default login
     anthropic_api_key: str | None = None
     anthropic_workspace_id: str | None = None  # only for keys not tied to a Console workspace
     claude_model: str = DEFAULT_MODEL

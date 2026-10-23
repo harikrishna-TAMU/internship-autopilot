@@ -27,7 +27,8 @@ Do these once, in order. The "What you need to do" section at the bottom has the
 | 3 | Save Google's OAuth file as `credentials.json` in the project folder | Lets the pipeline read your Gmail |
 | 4 | `uv run autopilot gmail-auth` | Opens a browser once to authorize Gmail; creates the `Jobs` and `Jobs/Processed` labels |
 | 5 | Create the Gmail filter | Sends emails to your `+jobs` address to the `Jobs` label, skipping the inbox |
-| 6 | `uv run autopilot doctor` | Checks everything; all lines should show ✓ |
+| 6 | `uv run autopilot browser-setup` | One time: opens the review Chrome window normally so you can sign into Chrome (password sync) and log into job sites. Stop the worker first; quit the window with ⌘Q |
+| `uv run autopilot doctor` | Checks everything; all lines should show ✓ |
 
 Other setup commands:
 
@@ -163,7 +164,8 @@ What the statuses mean:
 | **Orange dashed outline** | An answer Claude drafted. Read it and make it yours |
 | **Red outline** | A required field left for you (consent boxes, self-ID questions, anything not in your profile) |
 | Banner at the top right | Summary of what was filled. Nothing has been submitted |
-| Workday / LinkedIn tab | Only opened, not filled: Workday needs an account, and LinkedIn bans automation. Fill these yourself |
+| Sign-in page (Workday, company portals) | Sign in yourself (Chrome can offer your saved password); the form is filled right after. On multi-step forms click **Next**; each new page is filled and your entries are kept |
+| LinkedIn tab | Only opened, never filled (LinkedIn bans automation) |
 
 The tool never clicks Submit. You always do.
 

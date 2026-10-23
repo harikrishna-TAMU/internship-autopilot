@@ -12,7 +12,14 @@ basics:
   preferred_name: null
   email: you@university.edu            # shown on resumes and applications
   phone: "TODO +1 555 555 5555"
-  location: TODO City, ST
+  location: TODO City, ST              # shown on the resume
+  address:                             # optional; used only to fill application forms
+    line1: null
+    line2: null
+    city: null
+    state: null
+    postal_code: null
+    country: null
   links:
     linkedin: https://www.linkedin.com/in/TODO
     github: https://github.com/TODO
