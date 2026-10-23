@@ -1,4 +1,4 @@
-# Internship Autopilot
+# ApplyPilot
 
 Turns internship links you email yourself (for example from @zero2sudo's Instagram Stories) into a tracked job list, a tailored one-page resume per job, and pre-filled applications in Chrome.
 
@@ -30,8 +30,8 @@ This repo has no one's personal data in it. Everything that's yours stays on you
 **You need:** a Mac (tested on macOS; Linux should work; Windows is untested), Google Chrome, [Homebrew](https://brew.sh), a personal Gmail account, and a Claude API key with some credit (about $0.30 per job).
 
 ```bash
-git clone https://github.com/harikrishna-TAMU/internship-autopilot.git
-cd internship-autopilot
+git clone https://github.com/harikrishna-TAMU/ApplyPilot.git
+cd ApplyPilot
 ```
 
 (If the repo is private, ask the owner to add you as a collaborator first.)
@@ -96,7 +96,7 @@ The pipeline refuses to score or tailor while the profile still has `TODO` place
 
 Use a **personal** Gmail account, not a university one: universities control API access to their accounts, and you lose them after graduating.
 
-1. Go to <https://console.cloud.google.com>, create a project (e.g. "internship-autopilot").
+1. Go to <https://console.cloud.google.com>, create a project (e.g. "applypilot").
 2. **APIs & Services → Library → Gmail API → Enable.**
 3. **APIs & Services → OAuth consent screen**: User type *External*. Fill the app name and your email. Under *Test users*, add your Gmail address.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID → Desktop app.** Download the JSON and save it in this folder as `credentials.json` (gitignored).

@@ -73,7 +73,7 @@ def running_pid(cfg: Config) -> int | None:
     return pid
 
 
-def notify(message: str, title: str = "Internship Autopilot") -> None:
+def notify(message: str, title: str = "ApplyPilot") -> None:
     """A macOS notification (no-op elsewhere)."""
     if sys.platform != "darwin":
         return

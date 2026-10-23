@@ -1,4 +1,4 @@
-# Internship Autopilot: project spec
+# ApplyPilot: project spec
 
 A personal tool that turns internship links (captured from @zero2sudo's Instagram Stories) into a tracked job list, a tailored resume per job, and pre-filled applications in Chrome. **Nothing is ever submitted automatically. A human reviews and clicks submit.**
 
@@ -270,7 +270,7 @@ rejections(id PK, job_id FK NULL, message_id FK, at, stage, reason_code, detail,
 ## 5. Repo layout
 
 ```
-internship-autopilot/
+ApplyPilot/
 ├── README.md
 ├── PROJECT_SPEC.md
 ├── COMMANDS.md

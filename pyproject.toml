@@ -1,5 +1,5 @@
 [project]
-name = "internship-autopilot"
+name = "applypilot"
 version = "0.1.0"
 description = "Turns emailed internship links into a tracked job list, tailored resumes and pre-filled applications. Never submits."
 readme = "README.md"

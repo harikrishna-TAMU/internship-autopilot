@@ -1,4 +1,4 @@
-# Autopilot: command reference
+# ApplyPilot: command reference
 
 Every command, what it does, and when to use it. `README.md` has the background; this file is for quick lookup.
 
@@ -201,7 +201,7 @@ Open `config/profile.yaml` and replace every `TODO`:
 
 ### 3. Google `credentials.json` (about 10 min)
 1. Go to <https://console.cloud.google.com> and sign in with your **personal Gmail**.
-2. Create a project (top bar → project picker → **New project**, e.g. "internship-autopilot").
+2. Create a project (top bar → project picker → **New project**, e.g. "applypilot").
 3. **APIs & Services → Library**, search "Gmail API", **Enable**.
 4. **APIs & Services → OAuth consent screen** (may be called **Google Auth Platform**): user type **External**, any app name, your email as the contact. Under **Test users / Audience**, add your personal Gmail.
 5. **Credentials / Clients → Create → OAuth client ID → Desktop app**, then **Download JSON**.

@@ -30,7 +30,7 @@ from autopilot.rejections import export_csv, parse_since, reject, restore
 from autopilot.resume.render import make_renderer
 
 app = typer.Typer(
-    help="Internship Autopilot: emailed job links → job list → tailored resumes → pre-filled Chrome tabs. Never submits.",
+    help="ApplyPilot: emailed job links → job list → tailored resumes → pre-filled Chrome tabs. Never submits.",
     no_args_is_help=True,
     add_completion=False,
 )
